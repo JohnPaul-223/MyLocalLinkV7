@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocaLink | Live Tracker</title>
+    
+    <!-- Design Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet Maps CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Supabase Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+    <!-- Main Map -->
+    <div id="map"></div>
+
+    <!-- UI Overlay -->
+    <div class="overlay">
+        <!-- Top Status Bar -->
+        <header class="glass-card top-bar">
+            <div class="profile">
+                <div class="avatar"></div>
+                <div class="user-info">
+                    <h2 id="userName">Local User</h2>
+                    <span id="userStatus" class="status offline">Offline</span>
+                </div>
+            </div>
+            <button class="icon-btn"><i data-lucide="bell"></i></button>
+        </header>
+
+        <!-- Bottom Controls -->
+        <main class="glass-card bottom-panel">
+            <div class="handle"></div>
+            <div class="panel-content">
+                <div class="tracking-info">
+                    <h3>Real-time Tracking</h3>
+                    <p>Share your live location with trusted circles.</p>
+                </div>
+                <button id="toggleBtn" class="btn primary">
+                    <i data-lucide="power"></i>
+                    <span>Go Online</span>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Login Modal (Hidden by default) -->
+    <div id="authModal" class="modal">
+        <div class="glass-card modal-content">
+            <h2>Welcome to LocaLink</h2>
+            <p>Sign in to start tracking</p>
+            <input type="email" id="email" placeholder="Email Address">
+            <input type="password" id="password" placeholder="Password">
+            <button id="authBtn" class="btn primary">Login / Sign Up</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="script.js"></script>
+    <script>lucide.createIcons();</script>
+</body>
+</html>
