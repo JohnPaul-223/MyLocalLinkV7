@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <meta name="description" content="LocaLink – Secure real-time location tracking, chat, and geofencing.">
+    <title>LocaLink | Secure Tracker</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+<!-- ===== MAP ===== -->
+<div id="map"></div>
+
+<!-- ===== NOTIFICATION TOAST ===== -->
+<div id="toast" class="toast hidden"></div>
+
+<!-- ===== MAIN UI WRAPPER ===== -->
+<div class="ui-layer">
+
+    <!-- TOP BAR -->
+    <header class="top-bar glass" id="topBar">
+        <div class="user-chip">
+            <div class="avatar" id="avatarEl">?</div>
+            <div>
+                <div class="username" id="displayName">Loading…</div>
+                <div class="status-dot" id="statusLabel">
+                    <span class="dot offline"></span> Offline
+                </div>
+            </div>
+        </div>
+        <div class="top-actions">
+            <button class="icon-btn" id="sosBtn" title="SOS Alert">🆘</button>
+            <button class="icon-btn" id="notifBtn" title="Notifications">🔔</button>
+            <button class="icon-btn" id="logoutBtn" title="Logout">↩️</button>
+        </div>
+    </header>
+
+    <!-- SIDE PANEL: CONTACTS -->
+    <aside class="side-panel glass" id="sidePanel">
+        <h4 class="panel-title">My Circle</h4>
+        <div id="contactsList" class="contacts-list">
+            <p class="muted">No contacts online.</p>
+        </div>
+    </aside>
+
+    <!-- BOTTOM CARD -->
+    <div class="bottom-card glass" id="bottomCard">
+        <div class="drag-handle"></div>
+        <div id="trackingSection">
+            <div class="bottom-row">
+                <div>
+                    <p class="label">Location Sharing</p>
+                    <p class="sub-label" id="locationCaption">Press Go Online to start</p>
+                </div>
+                <button class="toggle-btn online-btn" id="toggleBtn">Go Online</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== AUTH MODAL ===== -->
+<div class="modal-overlay" id="authOverlay">
+    <div class="modal glass">
+        <div class="logo-block">
+            <div class="logo-icon">📍</div>
+            <h1>LocaLink</h1>
+            <p class="muted">Secure Tracking Portal</p>
+        </div>
+        <form id="authForm" onsubmit="handleAuth(event)">
+            <input class="field" type="email" id="authEmail" placeholder="Email address" required>
+            <input class="field" type="password" id="authPassword" placeholder="Password" required>
+            <button class="btn primary full" type="submit">
+                <span id="authBtnLabel">Login</span>
+            </button>
+        </form>
+        <div class="dev-tools">
+            <button class="btn-link" onclick="nuclearReset()">⚠️ Reset System Data</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== CHAT WINDOW ===== -->
+<div class="chat-window glass hidden" id="chatWindow">
+    <div class="chat-header">
+        <div class="chat-user-info">
+            <div class="avatar sm" id="chatAvatar">?</div>
+            <div>
+                <div class="username" id="chatTitle">Chat</div>
+                <div id="chatStatus" class="muted small">offline</div>
+            </div>
+        </div>
+        <div class="chat-header-actions">
+            <button class="icon-btn" id="voiceCallBtn" title="Voice Call">📞</button>
+            <button class="icon-btn" id="videoCallBtn" title="Video Call">🎥</button>
+            <button class="icon-btn" onclick="closeChat()">✕</button>
+        </div>
+    </div>
+    <div class="chat-body" id="chatBody">
+        <p class="muted center-text">Start the conversation 👋</p>
+    </div>
+    <div class="chat-input-row">
+        <input class="field chat-field" type="text" id="msgInput" placeholder="Type a message…">
+        <button class="btn primary sq" id="sendBtn">➤</button>
+    </div>
+</div>
+
+<!-- ===== CALL OVERLAY ===== -->
+<div class="call-overlay hidden" id="callOverlay">
+    <div class="call-card glass">
+        <div class="avatar lg" id="callAvatar">?</div>
+        <p class="call-name" id="callName">Calling…</p>
+        <p class="muted" id="callState">Connecting…</p>
+        <div class="call-actions">
+            <button class="icon-btn" id="muteMicBtn" title="Mute">🎙️</button>
+            <button class="icon-btn" id="toggleCamBtn" title="Toggle Camera">📷</button>
+            <button class="btn danger" id="endCallBtn">End Call</button>
+        </div>
+        <div class="video-row">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ADMIN PANEL ===== -->
+<div class="modal-overlay hidden" id="adminOverlay">
+    <div class="modal glass large">
+        <div class="modal-header">
+            <h2>🛡️ Admin Panel</h2>
+            <button class="icon-btn" onclick="closeAdmin()">✕</button>
+        </div>
+        <div class="tab-row" id="adminTabs">
+            <button class="tab active" onclick="adminTab('users', this)">Users</button>
+            <button class="tab" onclick="adminTab('geofences', this)">Geofences</button>
+            <button class="tab" onclick="adminTab('groups', this)">Groups</button>
+        </div>
+
+        <!-- Unauthorized View -->
+        <div id="adminAuthLock" class="hidden auth-lock">
+            <div class="lock-vibe">🛡️</div>
+            <h3>Admin Access Restricted</h3>
+            <p class="muted">Only the primary Administrator can manage users and settings.</p>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="adminUsers">
+            <div class="admin-action-bar">
+                <h3>System Users</h3>
+                <button class="btn primary" onclick="$('createUserForm').classList.toggle('hidden')">+ Create User</button>
+            </div>
+            
+            <div id="createUserForm" class="hidden form-group glass-inline">
+                <input class="field" id="newUserName" placeholder="Full Name">
+                <input class="field" id="newUserEmail" placeholder="Email Address">
+                <input class="field" id="newUserPass" placeholder="Generate Password" type="text">
+                <button class="btn primary" onclick="adminCreateUser()">Save User</button>
+            </div>
+
+            <table class="admin-table" id="usersTable">
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Action</th></tr></thead>
+                <tbody id="usersTableBody"><tr><td colspan="4" class="muted">Loading…</td></tr></tbody>
+            </table>
+        </div>
+
+        <!-- Geofences Tab -->
+        <div id="adminGeofences" class="hidden">
+            <div id="geofencesList"></div>
+            <div class="form-group">
+                <input class="field" id="gfName" placeholder="Zone name (e.g. Home)">
+                <input class="field" id="gfLat"  placeholder="Latitude">
+                <input class="field" id="gfLng"  placeholder="Longitude">
+                <input class="field" id="gfRadius" placeholder="Radius (meters)" type="number">
+                <button class="btn primary" onclick="addGeofence()">+ Add Zone</button>
+            </div>
+        </div>
+
+        <!-- Groups Tab -->
+        <div id="adminGroups" class="hidden">
+            <div id="groupsList"></div>
+            <div class="form-group">
+                <input class="field" id="grpName" placeholder="Group name (e.g. Family)">
+                <button class="btn primary" onclick="createGroup()">+ Create Group</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- ===== ABOUT MODAL ===== -->
+<div class="modal-overlay hidden" id="aboutOverlay">
+    <div class="modal glass">
+        <div class="logo-block">
+            <div class="logo-icon">📍</div>
+            <h1>LocaLink</h1>
+            <p class="muted">Version 2.0.0</p>
+        </div>
+        <div class="about-content">
+            <p>LocaLink is a premium real-time location tracking and communication platform designed for safety and connectivity.</p>
+            <ul class="features-list">
+                <li>✨ Real-time GPS synchronization</li>
+                <li>💬 Secure peer-to-peer messaging</li>
+                <li>📞 HD Voice & Video sessions</li>
+                <li>🛡️ Advanced Admin controls</li>
+                <li>🆘 One-tap Emergency alerts</li>
+            </ul>
+        </div>
+        <button class="btn primary full" onclick="closeAbout()">Close</button>
+    </div>
+</div>
+
+<!-- ===== BOTTOM NAVIGATION ===== -->
+<nav class="bottom-nav glass" id="bottomNav">
+    <button class="nav-item active" id="navMap" onclick="switchNav('map')">
+        <span class="nav-icon">🗺️</span>
+        <span class="nav-label">Map</span>
+    </button>
+    <button class="nav-item" id="navChat" onclick="switchNav('chat')">
+        <span class="nav-icon">💬</span>
+        <span class="nav-label">Chat</span>
+    </button>
+    <button class="nav-item" id="navCall" onclick="switchNav('call')">
+        <span class="nav-icon">📞</span>
+        <span class="nav-label">Call</span>
+    </button>
+    <button class="nav-item" id="navAdmin" onclick="switchNav('admin')">
+        <span class="nav-icon">🛡️</span>
+        <span class="nav-label">Admin</span>
+    </button>
+    <button class="nav-item" id="navAbout" onclick="switchNav('about')">
+        <span class="nav-icon">ℹ️</span>
+        <span class="nav-label">About</span>
+    </button>
+</nav>
+
+<!-- ===== PROFILE POPUP ===== -->
+<div class="profile-popup glass hidden" id="profilePopup">
+    <div class="popup-header">
+        <div class="avatar" id="ppAvatar">?</div>
+        <div>
+            <div class="username" id="ppName">–</div>
+            <div class="muted small" id="ppEmail">–</div>
+            <div class="muted small" id="ppStatus">–</div>
+        </div>
+    </div>
+    <div class="popup-actions">
+        <button class="btn primary" id="ppChatBtn">💬 Chat</button>
+        <button class="btn secondary" id="ppCallBtn">📞 Call</button>
+        <button class="btn secondary" id="ppVideoBtn">🎥 Video</button>
+    </div>
+    <button class="icon-btn close-popup" onclick="closeProfile()">✕</button>
+</div>
+
+<!-- Main JS -->
+<script src="script.js"></script>
+
+</body>
+</html>
